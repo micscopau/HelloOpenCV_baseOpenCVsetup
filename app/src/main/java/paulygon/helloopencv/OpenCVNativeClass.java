@@ -7,6 +7,6 @@ package paulygon.helloopencv;
 public class OpenCVNativeClass {
 
     public native static int convertGray(long matAddrRgba, long matAddrGray);
-
+    public native static int circles(long matAddrRgba, long matAddrCircles);
 
 }

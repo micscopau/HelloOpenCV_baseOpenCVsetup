@@ -1,5 +1,6 @@
 package paulygon.helloopencv;
 
+import android.nfc.Tag;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -19,7 +20,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     private static String TAG = "MainActivity";
     JavaCameraView javaCameraView;
-    Mat mRgba, imgGray, imgCanny;
+    Mat mRgba, imgGray, imgCanny, imgCircles;
 
 
     BaseLoaderCallback mLoaderCallBack = new BaseLoaderCallback(this) {
@@ -50,9 +51,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     static {
         System.loadLibrary("native-lib");
         System.loadLibrary("opencv_java3");
-    }
 
-    static{
         if(OpenCVLoader.initDebug()){
             Log.i(TAG, " OpenCV loaded successfully");
         }
@@ -124,6 +123,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         mRgba = new Mat(height, width, CvType.CV_8UC4); //8UC 4 the 4 because 4 channel; r,g,b,a
         imgGray =  new Mat(height, width, CvType.CV_8UC1);
         imgCanny =  new Mat(height, width, CvType.CV_8UC1);
+        imgCircles = new Mat(height, width, CvType.CV_8UC1);
 
     }
 
@@ -140,9 +140,16 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         //Imgproc.Canny(imgGray, imgCanny, 50, 150);
         //return imgCanny;
 
-        OpenCVNativeClass.convertGray(mRgba.getNativeObjAddr(), imgGray.getNativeObjAddr());
+        //OpenCVNativeClass.convertGray(mRgba.getNativeObjAddr(), imgGray.getNativeObjAddr());
+        //return imgGray;
 
-        return imgGray;
+        int circles = 0;
+        Log.i(TAG, " Circle Count (pre function call) " + circles);
+
+        circles = OpenCVNativeClass.circles(mRgba.getNativeObjAddr(), imgCircles.getNativeObjAddr());
+
+        Log.i(TAG, " Circle Count " + circles);
+        return imgCircles;
     }
 
 

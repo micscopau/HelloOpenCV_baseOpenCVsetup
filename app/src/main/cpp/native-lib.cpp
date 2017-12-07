@@ -9,6 +9,7 @@ using namespace std;
 extern "C" {
 
 int toGray(Mat img, Mat& imgGray);
+int countCircles(Mat img, Mat& imgCircles);
 
 JNIEXPORT jstring
 
@@ -61,5 +62,71 @@ int toGray(Mat img, Mat& imgGray){
     return 0;
 }
 
+
+JNIEXPORT jint JNICALL
+Java_paulygon_helloopencv_OpenCVNativeClass_circles(JNIEnv *env, jclass type, jlong matAddrRgba, jlong matAddrCircles) {
+
+    Mat& mRgb = *(Mat*)matAddrRgba;
+    Mat& mCircles = *(Mat*)matAddrCircles;
+
+
+    jint circleCount;
+    int count;
+
+    count = countCircles(mRgb,mCircles);
+
+    circleCount = (jint)count;
+
+    return circleCount;
+
 }
 
+int countCircles(Mat img, Mat& imgCircles){
+    /*
+    Mat src = img;
+    Mat gray;
+
+
+    cvtColor(src, gray, COLOR_RGB2GRAY);
+    medianBlur(gray, gray,5);
+    vector<Vec3f> circles;
+
+    HoughCircles(gray, circles, HOUGH_GRADIENT, 1, gray.rows/16, 100,30,1,30);
+
+
+   for(size_t i = 0; i < circles.size() ; i++){
+       Vec3i c = circles[i];
+       Point center = Point(c[0], c[1]);
+       //circle center
+       circle(src, center, 1, Scalar(0,100,100), 3, LINE_AA);
+       int radius = c[2];
+       circle(src, center, 1, Scalar(255,0,255), 3, LINE_AA);
+   }
+   imshow("detected circles", src);
+    waitKey();
+     */
+
+    Mat gray;
+
+    cvtColor(img, gray, COLOR_RGB2GRAY);
+    medianBlur(gray, gray,5);
+    vector<Vec3f> circles;
+
+    HoughCircles(gray, circles, HOUGH_GRADIENT, 1, gray.rows/16, 100,30,1,30);
+
+
+    for(size_t i = 0; i < circles.size() ; i++){
+        Vec3i c = circles[i];
+        Point center = Point(c[0], c[1]);
+        //circle center
+        circle(imgCircles, center, 1, Scalar(0,100,100), 3, LINE_AA);
+        int radius = c[2];
+        circle(imgCircles, center, 1, Scalar(255,0,255), 3, LINE_AA);
+    }
+    //imshow("detected circles", imgCircles);
+    //waitKey();
+
+    return circles.size();
+}
+
+}
