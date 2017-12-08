@@ -1,10 +1,14 @@
 package paulygon.helloopencv;
 
 import android.nfc.Tag;
+import android.os.SystemClock;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.SurfaceView;
+import android.view.View;
+import android.view.WindowManager;
 import android.widget.TextView;
 
 import org.opencv.android.BaseLoaderCallback;
@@ -14,9 +18,12 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
-public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2{
+public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2, View.OnTouchListener {
 
     private static String TAG = "MainActivity";
     JavaCameraView javaCameraView;
@@ -29,6 +36,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             switch(status){
                 case BaseLoaderCallback.SUCCESS:{
                     javaCameraView.enableView();
+                    javaCameraView.setOnTouchListener(MainActivity.this);
                     break;
                 }
                 default:{
@@ -63,20 +71,25 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_main);
 
-        // Example of a call to a native method
-        TextView tv = (TextView) findViewById(R.id.sample_text);
-        tv.setText(stringFromJNI());
+//        // Example of a call to a native method
+//        TextView tv = (TextView) findViewById(R.id.sample_text);
+//        tv.setText(stringFromJNI());
+//
+//        if(!OpenCVLoader.initDebug()){
+//            tv.setText(tv.getText() + "\n OpenCVLoader.initDebug() not working.");
+//        } else{
+//            tv.setText(tv.getText() + "\n OpenCVLoader.initDebug() working!");
+//            tv.setText(tv.getText() + "\n" + validate(0L, 0L));
+//        }
 
-        if(!OpenCVLoader.initDebug()){
-            tv.setText(tv.getText() + "\n OpenCVLoader.initDebug() not working.");
-        } else{
-            tv.setText(tv.getText() + "\n OpenCVLoader.initDebug() working!");
-            tv.setText(tv.getText() + "\n" + validate(0L, 0L));
-        }
+
+
 
         javaCameraView = (JavaCameraView) findViewById(R.id.java_camera_view);
+        javaCameraView.setCameraIndex(0); //0=rear 1=front
         javaCameraView.setVisibility(SurfaceView.VISIBLE);
 
         javaCameraView.setCvCameraViewListener(this);
@@ -108,11 +121,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         super.onResume();
 
         if(OpenCVLoader.initDebug()){
-            Log.i(TAG, " OpenCV loaded successfully");
+            Log.i(TAG, "OpenCV library found inside package. Using it!");
             mLoaderCallBack.onManagerConnected(LoaderCallbackInterface.SUCCESS);
         }
         else{
-            Log.i(TAG, " OpenCV not loaded.");
+            Log.i(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
             OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mLoaderCallBack);
         }
 
@@ -124,7 +137,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         imgGray =  new Mat(height, width, CvType.CV_8UC1);
         imgCanny =  new Mat(height, width, CvType.CV_8UC1);
         imgCircles = new Mat(height, width, CvType.CV_8UC1);
-
     }
 
     @Override
@@ -134,24 +146,161 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
+
         mRgba = inputFrame.rgba();
 
-        //Imgproc.cvtColor(mRgba, imgGray, Imgproc.COLOR_RGB2GRAY);
-        //Imgproc.Canny(imgGray, imgCanny, 50, 150);
-        //return imgCanny;
+        circleCounterHelper();
 
-        //OpenCVNativeClass.convertGray(mRgba.getNativeObjAddr(), imgGray.getNativeObjAddr());
-        //return imgGray;
+        return mRgba;
+        //return inputFrame.rgba();
+
+        /*
+        mRgba = inputFrame.rgba();
 
         int circles = 0;
         Log.i(TAG, " Circle Count (pre function call) " + circles);
+
+        imgCircles.empty();
 
         circles = OpenCVNativeClass.circles(mRgba.getNativeObjAddr(), imgCircles.getNativeObjAddr());
 
         Log.i(TAG, " Circle Count " + circles);
         return imgCircles;
+        */
+
+        //SystemClock.sleep(100);
+
+        /*
+        Mat input = inputFrame.gray();
+        Mat blur = new Mat();
+        Mat circles = new Mat();
+
+        //Imgproc.blur(input, blur, new Size(7,7), new Point(2,2));
+        Imgproc.blur(input, blur, new Size(7,7)); //using default anchor of -1,-1 (kernel center)
+        Imgproc.HoughCircles(blur, circles, Imgproc.CV_HOUGH_GRADIENT, 2, 100, 100, 90, 0, 1000);
+
+        Log.i(TAG, String.valueOf("size: " + circles.cols()) + ", " + String.valueOf(circles.rows()));
+
+        int circleCount = 0;
+
+        if(circles.cols() >0){
+            //for (int i = 0 ; i < Math.min(circles.cols(), 5) ; i++){
+            for (int i = 0 ; i < circles.cols() ; i++){
+                double circleVec[] = circles.get(0,i);
+
+                circleCount++;
+                //circleCount = circleVec[2]
+
+                if (circleVec == null){
+                    break;
+                }
+
+                Point center = new Point((int) circleVec[0], (int) circleVec[1]);
+                int radius = (int) circleVec[2];
+
+                Imgproc.circle(input, center, 3, new Scalar(255,255,255),5);
+                Imgproc.circle(input, center, radius, new Scalar(255,255,255), 2);
+
+            }
+
+            Log.i(TAG, " Count of circles: " + circleCount);
+        }
+
+
+        circles.release();
+        input.release();
+        return inputFrame.rgba();
+        */
+
     }
 
+    @Override
+    public boolean onTouch(View view, MotionEvent motionEvent) {
 
+        Log.i(TAG, "onTouch event");
+        circleCounterHelper();
+        /*
+        //Mat input = inputFrame.gray();
+        Mat input = mRgba;
+        Mat blur = new Mat();
+        Mat circles = new Mat();
 
+        Imgproc.cvtColor(input, imgGray, Imgproc.COLOR_RGB2GRAY,0);
+
+        //Imgproc.blur(input, blur, new Size(7,7), new Point(2,2));
+        Imgproc.blur(imgGray, blur, new Size(7,7)); //using default anchor of -1,-1 (kernel center)
+
+        Imgproc.HoughCircles(blur, circles, Imgproc.CV_HOUGH_GRADIENT, 2, 25, 100, 90, 0, 100);
+
+        Log.i(TAG, String.valueOf("size: " + circles.cols()) + ", " + String.valueOf(circles.rows()));
+
+        int circleCount = 0;
+
+        if(circles.cols() >0){
+            //for (int i = 0 ; i < Math.min(circles.cols(), 5) ; i++){
+            for (int i = 0 ; i < circles.cols() ; i++){
+                double circleVec[] = circles.get(0,i);
+
+                circleCount++;
+                //circleCount = circleVec[2]
+
+                if (circleVec == null){
+                    break;
+                }
+
+                Point center = new Point((int) circleVec[0], (int) circleVec[1]);
+                int radius = (int) circleVec[2];
+
+                Imgproc.circle(input, center, 3, new Scalar(255,255,255),5);
+                Imgproc.circle(input, center, radius, new Scalar(255,255,255), 2);
+
+            }
+
+            Log.i(TAG, " Count of circles: " + circleCount);
+        }
+*/
+
+        return false;
+    }
+
+    public void circleCounterHelper(){
+        //Mat input = inputFrame.gray();
+        Mat input = mRgba;
+        Mat blur = new Mat();
+        Mat circles = new Mat();
+
+        Imgproc.cvtColor(input, imgGray, Imgproc.COLOR_RGB2GRAY,0);
+
+        //Imgproc.blur(input, blur, new Size(7,7), new Point(2,2));
+        Imgproc.blur(imgGray, blur, new Size(7,7)); //using default anchor of -1,-1 (kernel center)
+
+        Imgproc.HoughCircles(blur, circles, Imgproc.CV_HOUGH_GRADIENT, 2, 50, 100, 90, 0, 100);
+
+        Log.i(TAG, String.valueOf("size: " + circles.cols()) + ", " + String.valueOf(circles.rows()));
+
+        int circleCount = 0;
+
+        if(circles.cols() >0){
+            //for (int i = 0 ; i < Math.min(circles.cols(), 5) ; i++){
+            for (int i = 0 ; i < circles.cols() ; i++){
+                double circleVec[] = circles.get(0,i);
+
+                circleCount++;
+                //circleCount = circleVec[2]
+
+                if (circleVec == null){
+                    break;
+                }
+
+                Point center = new Point((int) circleVec[0], (int) circleVec[1]);
+                int radius = (int) circleVec[2];
+
+                Imgproc.circle(input, center, 3, new Scalar(255,255,255),5);
+                Imgproc.circle(input, center, radius, new Scalar(255,255,255), 2);
+
+            }
+
+            Log.i(TAG, " Count of circles: " + circleCount);
+        }
+    }
 }
