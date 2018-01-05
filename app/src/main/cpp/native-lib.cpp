@@ -14,7 +14,7 @@ int countCircles(Mat img, Mat& imgCircles);
 JNIEXPORT jstring
 
 JNICALL
-Java_paulygon_helloopencv_MainActivity_stringFromJNI(
+Java_paulygon_helloopencv_CameraActivity_stringFromJNI(
         JNIEnv *env,
         jobject /* this */) {
     std::string hello = "Hello from C++";
@@ -24,7 +24,7 @@ Java_paulygon_helloopencv_MainActivity_stringFromJNI(
 
 
 JNIEXPORT jstring JNICALL
-Java_paulygon_helloopencv_MainActivity_validate(JNIEnv *env, jobject instance, jlong matAddrGr,
+Java_paulygon_helloopencv_CameraActivity_validate(JNIEnv *env, jobject instance, jlong matAddrGr,
                                                 jlong matAddrRgba) {
 
     cv::Rect();
