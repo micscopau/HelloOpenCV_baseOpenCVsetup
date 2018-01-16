@@ -61,6 +61,7 @@ public class CameraActivityNative extends AppCompatActivity {
             }
         });
     }
+
     private Camera checkDeviceCamera(){
         Camera mCamera = null;
         try {
@@ -79,7 +80,18 @@ public class CameraActivityNative extends AppCompatActivity {
                 Toast.makeText(CameraActivityNative.this, "Captured image is empty", Toast.LENGTH_LONG).show();
                 return;
             }
-            capturedImageHolder.setImageBitmap(scaleDownBitmapImage(bitmap, 300, 200 ));
+            //capturedImageHolder.setImageBitmap(scaleDownBitmapImage(bitmap, 300, 200 ));
+
+            Camera.Parameters parameters;
+
+            parameters = camera.getParameters();
+
+            capturedImageHolder.setImageBitmap(scaleDownBitmapImage(bitmap, parameters.getPreviewSize().width, parameters.getPreviewSize().height ));
+            //capturedImageHolder.setImageBitmap(bitmap);
+
+            capturedImageHolder.setVisibility(View.VISIBLE);
+            camera.stopPreview();
+
         }
     };
 

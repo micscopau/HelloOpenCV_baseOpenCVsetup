@@ -77,4 +77,9 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, CameraActivityNative.class);
         startActivity(intent);
     }
+
+    public void buttonCamera2apiClick(View view) {
+        Intent intent = new Intent(this, Camera2Activity.class);
+        startActivity(intent);
+    }
 }

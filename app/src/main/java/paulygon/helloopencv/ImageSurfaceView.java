@@ -23,6 +23,7 @@ public class ImageSurfaceView extends SurfaceView implements SurfaceHolder.Callb
     private SurfaceHolder surfaceHolder;
     private SurfaceHolder mHolder;
 
+
     /*
     public ImageSurfaceView(Context context, Camera camera) {
         super(context);
@@ -66,8 +67,29 @@ public class ImageSurfaceView extends SurfaceView implements SurfaceHolder.Callb
             //do nothing, no preview to stop.
         }
 
-        //Camera.Parameters parameters = mCamera.getParameters();
+        adjustOrientation();
+        //int rotation = adjustOrientation(mCamera.getParameters(), mCamera);
+        //mCamera.setDisplayOrientation(rotation);
 
+        setFocus(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+        //mCamera.startPreview();
+        startPreview();
+        surfaceCreated(this.surfaceHolder);
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder) {
+        this.mCamera.stopPreview();
+        this.mCamera.release();
+    }
+
+    private void setFocus(String mParameter){
+        Camera.Parameters mParameters = mCamera.getParameters();
+        mParameters.setFocusMode(mParameter);
+        mCamera.setParameters(mParameters);
+    }
+
+    public void adjustOrientation(){
         int orientation = getResources().getConfiguration().orientation;
         int degrees = 0;
 
@@ -89,26 +111,40 @@ public class ImageSurfaceView extends SurfaceView implements SurfaceHolder.Callb
 
         degrees = degrees % 360;
         mCamera.setDisplayOrientation(degrees);
-
-
-        setFocus(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
-        //mCamera.startPreview();
-        startPreview();
-        surfaceCreated(this.surfaceHolder);
     }
 
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
-        this.mCamera.stopPreview();
-        this.mCamera.release();
-    }
+    public int adjustOrientation(Camera.CameraInfo info, Camera camera){
+        int rotation = ((Activity) getContext()).getWindowManager().getDefaultDisplay().getRotation();
+        int degrees = 0;
 
-    private void setFocus(String mParameter){
-        Camera.Parameters mParameters = mCamera.getParameters();
-        mParameters.setFocusMode(mParameter);
-        mCamera.setParameters(mParameters);
-    }
+        switch(rotation) {
+            case Surface.ROTATION_0:
+                degrees = 0 ;
+                break;
+            case Surface.ROTATION_90:
+                degrees = 90;
+                break;
+            case Surface.ROTATION_180:
+                degrees = 180;
+                break;
+            case Surface.ROTATION_270:
+                degrees = 270;
+                break;
+        }
 
+        int result;
+        if(info.facing==Camera.CameraInfo.CAMERA_FACING_FRONT){
+            result = (info.orientation + degrees) % 360;
+            result = (360 - result) % 360;
+        }else{
+            result = (info.orientation - degrees + 360) % 360;
+        }
+
+        return result;
+
+        //degrees = degrees % 360;
+        //mCamera.setDisplayOrientation(degrees);
+    }
 
     private void startPreview() {
         try {
@@ -126,6 +162,7 @@ public class ImageSurfaceView extends SurfaceView implements SurfaceHolder.Callb
             float targetRatio = targetPreviewWidth / (float) targetPreviewHeight;
 
             Log.v(TAG, "target size: " + targetPreviewWidth + " / " + targetPreviewHeight + " ratio:" + targetRatio);
+
             for (Camera.Size candidateSize : previewSizes) {
                 float whRatio = candidateSize.width / (float) candidateSize.height;
                 if (previewSize == null || Math.abs(targetRatio - whRatio) < Math.abs(targetRatio - closestRatio)) {
@@ -135,6 +172,7 @@ public class ImageSurfaceView extends SurfaceView implements SurfaceHolder.Callb
             }
 
             Log.v(TAG, "preview size: " + previewSize.width + " / " + previewSize.height);
+
             parameters.setPreviewSize(previewSize.width, previewSize.height);
             mCamera.setParameters(parameters);
             mCamera.setPreviewDisplay(mHolder);
