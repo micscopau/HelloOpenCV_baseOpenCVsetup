@@ -8,13 +8,29 @@
 
 
     <Button
-        android:id="@+id/buttonCamera"
+        android:id="@+id/buttonOpenCVCamera"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Open Camera"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:onClick="buttonOpenCVCameraClick"
+        android:text="OpenCV Camera"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        tools:layout_editor_absoluteY="133dp"
-        android:onClick="buttonCameraClick"/>
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/buttonNativeCamera"/>
+
+    <Button
+        android:id="@+id/buttonNativeCamera"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:layout_marginTop="8dp"
+        android:onClick="buttonNativeCameraClick"
+        android:text="Open Native Camera"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/buttonOpenCVCamera" />
 
 </android.support.constraint.ConstraintLayout>

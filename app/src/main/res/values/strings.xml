@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">HelloOpenCV</string>
+    <string name="capture_button">Capture</string>
+    <string name="desc">Picture Result</string>
+
+    <string name="action_settings">Settings</string>
+
 </resources>

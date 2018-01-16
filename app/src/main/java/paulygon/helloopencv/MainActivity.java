@@ -67,9 +67,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    public void buttonCameraClick(View view) {
+    public void buttonOpenCVCameraClick(View view) {
         Intent intent = new Intent(this, CameraActivity.class);
         startActivity(intent);
 
+    }
+
+    public void buttonNativeCameraClick(View view) {
+        Intent intent = new Intent(this, CameraActivityNative.class);
+        startActivity(intent);
     }
 }
