@@ -1,34 +1,167 @@
 package paulygon.helloopencv;
 
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.hardware.Camera;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import org.opencv.android.CameraBridgeViewBase;
+import org.opencv.android.JavaCameraView;
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.imgproc.Imgproc;
 
 public class CapturedPictureActivity extends AppCompatActivity {
+
+    private static String TAG = "CapturedPictureActivity";
+
+    private Intent inIntent;
+    private byte[] imageBytes;
+    private float bitmapRotation;
+    private ImageView imageView;
+    private TextView textViewPipCount;
+
+    Mat mRgba, imgGray, imgCanny, imgCircles;
+
+    Mat mRgbaF, mRgbaT; //o
+
+    int circleCount = 0;
+
+    private Bitmap circleBitmap;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_captured_picture);
+
+        imageView = (ImageView) findViewById(R.id.captured_image);
+        assert imageView != null;
+
+        inIntent = getIntent();
+
+        imageBytes = inIntent.getByteArrayExtra(Camera2Activity.CAPTURED_IMAGE);
+        bitmapRotation = inIntent.getFloatExtra(Camera2Activity.BITMAP_ROTATION, 0);
+
+        Bitmap bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
+        Bitmap rotatedBitmap = RotateBitmap(bitmap, bitmapRotation);
+
+        circleBitmap = circleCounterHelper(rotatedBitmap);
+
+        imageView.setImageBitmap(circleBitmap);
+
+        updatePipCount();
+
     }
 
+
     public void fabAcceptClick(View view) {
+        Toast.makeText(this, "Accepting Pip Count of :" + circleCount, Toast.LENGTH_LONG).show();
     }
 
     public void fabCameraClick(View view) {
+        Intent outIntent = new Intent(this, Camera2Activity.class);
+        startActivity(outIntent);
     }
 
     public void bttnMinusFiftyClick(View view) {
+        circleCount-=50;
+        updatePipCount();
     }
 
     public void bttnMinusOneClick(View view) {
+        circleCount--;
+        updatePipCount();
     }
 
     public void bttnPlusOneClick(View view) {
+        circleCount++;
+        updatePipCount();
     }
 
     public void bttnPlusFiftyClick(View view) {
+        circleCount+=50;
+        updatePipCount();
     }
+
+    public void updatePipCount(){
+        textViewPipCount.setText(circleCount);
+    }
+
+    public static Bitmap RotateBitmap(Bitmap source, float angle)
+    {
+        Matrix matrix = new Matrix();
+        matrix.postRotate(angle);
+        return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
+    }
+
+    //public void circleCounterHelper(byte[] data){
+    public Bitmap circleCounterHelper(Bitmap bitmap){
+
+        //Mat input = new Mat();//Mat(width, height, CvType.CV_8UC4);
+        //input.put(0,0,data);
+
+        Mat input = new Mat();
+        Bitmap bmp32 = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+        Utils.bitmapToMat(bmp32, input);
+
+        Mat blur = new Mat();
+        Mat circles = new Mat();
+
+        Imgproc.cvtColor(input, imgGray, Imgproc.COLOR_RGB2GRAY,0);
+
+        //Imgproc.blur(input, blur, new Size(7,7), new Point(2,2));
+        Imgproc.blur(imgGray, blur, new Size(7,7)); //using default anchor of -1,-1 (kernel center)
+
+        Imgproc.HoughCircles(blur, circles, Imgproc.CV_HOUGH_GRADIENT, 2, 50, 100, 90, 0, 100);
+
+        //Log.i(TAG, String.valueOf("size: " + circles.cols()) + ", " + String.valueOf(circles.rows()));
+
+        circleCount = 0;
+
+        if(circles.cols() >0){
+            //for (int i = 0 ; i < Math.min(circles.cols(), 5) ; i++){
+            for (int i = 0 ; i < circles.cols() ; i++){
+                double circleVec[] = circles.get(0,i);
+
+                circleCount++;
+                //circleCount = circleVec[2]
+
+                if (circleVec == null){
+                    break;
+                }
+
+                Point center = new Point((int) circleVec[0], (int) circleVec[1]);
+                int radius = (int) circleVec[2];
+
+                Imgproc.circle(input, center, 3, new Scalar(255,255,255),5);
+                Imgproc.circle(input, center, radius, new Scalar(255,255,255), 2);
+
+            }
+
+            //Log.i(TAG, " Count of circles: " + circleCount);
+
+        }
+
+        Utils.matToBitmap(input, bmp32);
+
+        return bmp32;
+
+    }
+
+
 
 
 }

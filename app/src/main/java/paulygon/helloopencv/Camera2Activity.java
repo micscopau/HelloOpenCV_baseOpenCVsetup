@@ -3,6 +3,7 @@ package paulygon.helloopencv;
 import android.Manifest;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -49,11 +50,13 @@ import java.util.List;
 public class Camera2Activity extends AppCompatActivity {
 
     private static final String TAG = "Camera2Activity";
+    public static final String CAPTURED_IMAGE = "paulygon.Camera2Activity.CAPTURED_IMAGE";
+    public static final String BITMAP_ROTATION = "paulygon.Camera2Activity.BITMAP_ROTATION";
 
     private Button takePictureButton;
     private TextureView textureView;
 
-    private ImageView imageView;
+
 
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
 
@@ -77,6 +80,10 @@ public class Camera2Activity extends AppCompatActivity {
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
 
+    private byte[] imageBytes;
+
+    private Context context = this;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -89,9 +96,6 @@ public class Camera2Activity extends AppCompatActivity {
 
         takePictureButton = (Button) findViewById(R.id.btn_takepicture);
         assert takePictureButton != null;
-
-        imageView = (ImageView) findViewById(R.id.captured_image);
-        assert imageView != null;
 
 
         takePictureButton.setOnClickListener(new View.OnClickListener() {
@@ -317,7 +321,7 @@ public class Camera2Activity extends AppCompatActivity {
             int rotation = getWindowManager().getDefaultDisplay().getRotation();
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
 
-            final float rotationBitmap = (float) ORIENTATIONS.get(rotation);
+            final float bitmapRotation = (float) ORIENTATIONS.get(rotation);
 
             ImageReader.OnImageAvailableListener readerListener = new ImageReader.OnImageAvailableListener() {
                 @Override
@@ -330,10 +334,8 @@ public class Camera2Activity extends AppCompatActivity {
                         buffer.get(bytes);
                         //save(bytes);
 
-                        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                        Bitmap rotatedBitmap = RotateBitmap(bitmap, rotationBitmap);
+                        imageBytes = bytes;
 
-                        imageView.setImageBitmap(rotatedBitmap);
 
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -354,6 +356,12 @@ public class Camera2Activity extends AppCompatActivity {
                     super.onCaptureCompleted(session, request, result);
                     Toast.makeText(Camera2Activity.this, "Captured Image (not saved)" , Toast.LENGTH_SHORT).show();
                     //createCameraPreview();
+
+                    Intent outIntent = new Intent(context, CapturedPictureActivity.class);
+                    outIntent.putExtra(CAPTURED_IMAGE, imageBytes);
+                    outIntent.putExtra(BITMAP_ROTATION, bitmapRotation);
+                    startActivity(outIntent);
+
                 }
             };
 
@@ -378,12 +386,7 @@ public class Camera2Activity extends AppCompatActivity {
         }
     }
 
-    public static Bitmap RotateBitmap(Bitmap source, float angle)
-    {
-        Matrix matrix = new Matrix();
-        matrix.postRotate(angle);
-        return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
-    }
+
 
     protected void createCameraPreview() {
         try {
