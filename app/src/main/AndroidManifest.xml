@@ -6,7 +6,6 @@
 
     <uses-feature android:name="android.hardware.camera" />
     <uses-feature android:name="android.hardware.camera.autofocus" />
-
     <uses-feature android:name="android.hardware.camera2.full" />
 
     <application
@@ -25,7 +24,8 @@
         </activity>
         <activity android:name=".CameraActivity" />
         <activity android:name=".CameraActivityNative" />
-        <activity android:name=".Camera2Activity"></activity>
+        <activity android:name=".Camera2Activity" />
+        <activity android:name=".CapturedPictureActivity"></activity>
     </application>
 
 </manifest>

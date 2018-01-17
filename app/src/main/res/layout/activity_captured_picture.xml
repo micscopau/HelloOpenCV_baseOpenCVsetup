@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="paulygon.helloopencv.CapturedPictureActivity"
+
+    >
+
+
+    <ImageView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:id="@+id/captured_image"
+        android:contentDescription="@string/desc"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/textViewPips"
+        android:layout_marginBottom="32dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginRight="16dp"
+        android:layout_marginLeft="16dp"
+        />
+
+    <TextView
+        android:id="@+id/textViewPips"
+        android:text="Pips: "
+        android:textSize="24dp"
+        android:textColor="@android:color/black"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:layout_marginTop="16dp"
+        app:layout_constraintStart_toEndOf="@id/bttnMinus"
+        app:layout_constraintEnd_toStartOf="@id/bttnPlus"
+        app:layout_constraintTop_toTopOf="@+id/bttnMinus"
+        app:layout_constraintBottom_toBottomOf="@+id/bttnMinus"
+        />
+
+
+    <ImageView
+        android:id="@+id/bttnMinus"
+        android:src="@drawable/minus"
+        android:layout_width="75dp"
+        android:layout_height="75dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/textViewPips"
+        app:layout_constraintTop_toBottomOf="@+id/captured_image"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+
+        />
+
+    <ImageView
+        android:id="@+id/bttnPlus"
+        android:src="@drawable/plus"
+        android:layout_width="75dp"
+        android:layout_height="75dp"
+        app:layout_constraintStart_toEndOf="@+id/textViewPips"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/bttnMinus"
+        app:layout_constraintBottom_toBottomOf="@+id/bttnMinus"
+        android:layout_marginBottom="16dp"
+        android:layout_marginTop="16dp"
+   />
+
+
+</android.support.constraint.ConstraintLayout>
