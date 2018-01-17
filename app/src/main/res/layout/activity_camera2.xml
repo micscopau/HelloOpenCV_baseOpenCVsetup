@@ -16,6 +16,7 @@
         android:layout_height="wrap_content"
         android:layout_above="@+id/btn_takepicture"
         android:layout_alignParentTop="true"/>
+
     <Button
         android:id="@+id/btn_takepicture"
         android:layout_width="wrap_content"
@@ -25,5 +26,15 @@
         android:layout_marginBottom="16dp"
         android:layout_marginTop="16dp"
         android:text="take_picture" />
+
+    <ImageView
+        android:layout_height="0dp"
+        android:layout_width="0dp"
+        android:layout_alignLeft="@+id/texture"
+        android:layout_alignRight="@+id/texture"
+        android:layout_alignTop="@+id/texture"
+        android:layout_alignBottom="@id/texture"
+        android:id="@+id/captured_image"
+        android:contentDescription="@string/desc" />
 
 </RelativeLayout>

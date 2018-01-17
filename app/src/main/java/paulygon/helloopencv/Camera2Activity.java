@@ -4,7 +4,10 @@ import android.Manifest;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -31,6 +34,7 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.Toast;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -48,6 +52,8 @@ public class Camera2Activity extends AppCompatActivity {
 
     private Button takePictureButton;
     private TextureView textureView;
+
+    private ImageView imageView;
 
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
 
@@ -84,10 +90,15 @@ public class Camera2Activity extends AppCompatActivity {
         takePictureButton = (Button) findViewById(R.id.btn_takepicture);
         assert takePictureButton != null;
 
+        imageView = (ImageView) findViewById(R.id.captured_image);
+        assert imageView != null;
+
+
         takePictureButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                takePicture();
+                //savePicture();
+                tempPicture();
             }
         });
 
@@ -157,7 +168,8 @@ public class Camera2Activity extends AppCompatActivity {
         }
     }
 
-    protected void takePicture() {
+    protected void savePicture() {
+
         if(null == cameraDevice) {
             Log.e(TAG, "cameraDevice is null");
             return;
@@ -261,6 +273,116 @@ public class Camera2Activity extends AppCompatActivity {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+    }
+
+
+    protected void tempPicture() {
+
+        if(null == cameraDevice) {
+            Log.e(TAG, "cameraDevice is null");
+            return;
+        }
+
+        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+
+        try {
+            CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraDevice.getId());
+
+            /*
+            Size[] jpegSizes = null;
+
+            if (characteristics != null) {
+                jpegSizes = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(ImageFormat.JPEG);
+            }
+
+            int width = 640;
+            int height = 480;
+
+            if (jpegSizes != null && 0 < jpegSizes.length) {
+                width = jpegSizes[0].getWidth();
+                height = jpegSizes[0].getHeight();
+            }*/
+
+            ImageReader reader = ImageReader.newInstance(imageDimension.getWidth(), imageDimension.getHeight(), ImageFormat.JPEG, 1);
+
+            List<Surface> outputSurfaces = new ArrayList<Surface>(2);
+            outputSurfaces.add(reader.getSurface());
+            outputSurfaces.add(new Surface(textureView.getSurfaceTexture()));
+
+            final CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            captureBuilder.addTarget(reader.getSurface());
+            captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+
+            // Orientation
+            int rotation = getWindowManager().getDefaultDisplay().getRotation();
+            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
+
+            final float rotationBitmap = (float) ORIENTATIONS.get(rotation);
+
+            ImageReader.OnImageAvailableListener readerListener = new ImageReader.OnImageAvailableListener() {
+                @Override
+                public void onImageAvailable(ImageReader reader) {
+                    Image image = null;
+                    try {
+                        image = reader.acquireLatestImage();
+                        ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+                        byte[] bytes = new byte[buffer.capacity()];
+                        buffer.get(bytes);
+                        //save(bytes);
+
+                        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                        Bitmap rotatedBitmap = RotateBitmap(bitmap, rotationBitmap);
+
+                        imageView.setImageBitmap(rotatedBitmap);
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    } finally {
+                        if (image != null) {
+                            image.close();
+                        }
+                    }
+                }
+
+            };
+
+            reader.setOnImageAvailableListener(readerListener, mBackgroundHandler);
+
+            final CameraCaptureSession.CaptureCallback captureListener = new CameraCaptureSession.CaptureCallback() {
+                @Override
+                public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
+                    super.onCaptureCompleted(session, request, result);
+                    Toast.makeText(Camera2Activity.this, "Captured Image (not saved)" , Toast.LENGTH_SHORT).show();
+                    //createCameraPreview();
+                }
+            };
+
+            cameraDevice.createCaptureSession(outputSurfaces, new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(CameraCaptureSession session) {
+                    try {
+                        session.capture(captureBuilder.build(), captureListener, mBackgroundHandler);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void onConfigureFailed(CameraCaptureSession session) {
+                }
+
+            }, mBackgroundHandler);
+
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static Bitmap RotateBitmap(Bitmap source, float angle)
+    {
+        Matrix matrix = new Matrix();
+        matrix.postRotate(angle);
+        return Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
     }
 
     protected void createCameraPreview() {
@@ -381,13 +503,12 @@ public class Camera2Activity extends AppCompatActivity {
         super.onPause();
     }
 
+
     @Override
     protected void onDestroy(){
         Log.e(TAG, "onDestroy");
 
         closeCamera();
-        stopBackgroundThread();
-
         super.onDestroy();
     }
 }
