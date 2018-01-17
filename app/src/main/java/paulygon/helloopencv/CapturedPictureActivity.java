@@ -14,8 +14,11 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.JavaCameraView;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
@@ -42,6 +45,39 @@ public class CapturedPictureActivity extends AppCompatActivity {
     private Bitmap circleBitmap;
 
 
+    BaseLoaderCallback mLoaderCallBack = new BaseLoaderCallback(this) {
+        @Override
+        public void onManagerConnected(int status) {
+            switch(status){
+                case BaseLoaderCallback.SUCCESS:{
+                    //javaCameraView.enableView();
+                    //javaCameraView.setOnTouchListener(CameraActivity.this);
+                    //mOpenCvCameraView.enableView(); //o
+                    //mOpenCvCameraView.setOnTouchListener(CameraActivity.this);
+                    break;
+                }
+                default:{
+                    super.onManagerConnected(status);
+                    break;
+                }
+            }
+        }
+    };
+
+    // Used to load the 'native-lib' library on application startup.
+    static {
+        System.loadLibrary("native-lib");
+        System.loadLibrary("opencv_java3");
+
+        if(OpenCVLoader.initDebug()){
+            Log.i(TAG, " OpenCV loaded successfully");
+        }
+        else{
+            Log.i(TAG, " OpenCV not loaded.");
+        }
+    }
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -49,6 +85,10 @@ public class CapturedPictureActivity extends AppCompatActivity {
 
         imageView = (ImageView) findViewById(R.id.captured_image);
         assert imageView != null;
+
+        imgGray = new Mat();
+
+        textViewPipCount = (TextView) findViewById(R.id.textViewPipCount);
 
         inIntent = getIntent();
 
@@ -97,7 +137,7 @@ public class CapturedPictureActivity extends AppCompatActivity {
     }
 
     public void updatePipCount(){
-        textViewPipCount.setText(circleCount);
+        textViewPipCount.setText(Integer.toString(circleCount));
     }
 
     public static Bitmap RotateBitmap(Bitmap source, float angle)
@@ -162,6 +202,20 @@ public class CapturedPictureActivity extends AppCompatActivity {
     }
 
 
+    @Override
+    protected void onResume(){
+        super.onResume();
+
+        if(OpenCVLoader.initDebug()){
+            Log.i(TAG, "OpenCV library found inside package. Using it!");
+            mLoaderCallBack.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
+        else{
+            Log.i(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mLoaderCallBack);
+        }
+
+    }
 
 
 }

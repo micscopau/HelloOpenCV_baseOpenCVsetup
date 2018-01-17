@@ -25,8 +25,9 @@
         />
 
     <TextView
-        android:id="@+id/textViewPips"
-        android:text="Pips: "
+        android:id="@+id/textViewPipCount"
+
+        android:text="0"
         android:textSize="32dp"
         android:textColor="@android:color/black"
         android:layout_width="wrap_content"

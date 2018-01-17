@@ -80,6 +80,8 @@ public class Camera2Activity extends AppCompatActivity {
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
 
+    private boolean isFlashOn = false;
+
     private byte[] imageBytes;
 
     private Context context = this;
@@ -397,6 +399,7 @@ public class Camera2Activity extends AppCompatActivity {
             Surface surface = new Surface(texture);
 
             captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            captureRequestBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH); //enable ? CameraMetadata.FLASH_MODE_TORCH : CameraMetadata.FLASH_MODE_OFF);
             captureRequestBuilder.addTarget(surface);
 
             cameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback(){
@@ -483,6 +486,35 @@ public class Camera2Activity extends AppCompatActivity {
             }
         }
     }
+
+    /*
+
+    public boolean ismFlashSupported() {
+        return mFlashSupported;
+    }
+
+    public void switchFlash(){
+        try{
+            if (ismFlashSupported()){
+                if (isFlashOn) {
+                    mPreviewBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF);
+                    mPreviewSession.setRepeatingRequest(mPreviewBuilder.build(), null, null);
+                    flashButton.setImageResource(R.drawable.ic_flash_off);
+                    isTorchOn = false;
+                } else {
+                    mPreviewBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_TORCH);
+                    mPreviewSession.setRepeatingRequest(mPreviewBuilder.build(), null, null);
+                    flashButton.setImageResource(R.drawable.ic_flash_on);
+                    isTorchOn = true;
+                }
+            }
+        }
+    } catch (CameraAccessException e) {
+        e.printStackTrace();
+
+    }
+*/
+
 
     @Override
     protected void onResume() {
