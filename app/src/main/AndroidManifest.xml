@@ -24,10 +24,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".CameraActivity" />
+        <activity android:name=".OpenCVActivity" />
         <activity android:name=".CameraActivityNative" />
         <activity android:name=".Camera2Activity" />
-        <activity android:name=".CapturedPictureActivity"></activity>
+        <activity android:name=".CapturedPictureActivity"/>
+        <activity android:name=".CameraActivity"/>
+
     </application>
 
 </manifest>

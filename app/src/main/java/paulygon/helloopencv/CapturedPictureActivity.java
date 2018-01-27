@@ -51,9 +51,9 @@ public class CapturedPictureActivity extends AppCompatActivity {
             switch(status){
                 case BaseLoaderCallback.SUCCESS:{
                     //javaCameraView.enableView();
-                    //javaCameraView.setOnTouchListener(CameraActivity.this);
+                    //javaCameraView.setOnTouchListener(OpenCVActivity.this);
                     //mOpenCvCameraView.enableView(); //o
-                    //mOpenCvCameraView.setOnTouchListener(CameraActivity.this);
+                    //mOpenCvCameraView.setOnTouchListener(OpenCVActivity.this);
                     break;
                 }
                 default:{
@@ -100,6 +100,7 @@ public class CapturedPictureActivity extends AppCompatActivity {
 
         circleBitmap = circleCounterHelper(rotatedBitmap);
 
+        //imageView.setImageBitmap(rotatedBitmap);
         imageView.setImageBitmap(circleBitmap);
 
         updatePipCount();

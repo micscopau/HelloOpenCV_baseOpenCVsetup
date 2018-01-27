@@ -356,7 +356,7 @@ public class Camera2Activity extends AppCompatActivity {
                 @Override
                 public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
                     super.onCaptureCompleted(session, request, result);
-                    Toast.makeText(Camera2Activity.this, "Captured Image (not saved)" , Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(Camera2Activity.this, "Captured Image (not saved)" , Toast.LENGTH_SHORT).show();
                     //createCameraPreview();
 
                     Intent outIntent = new Intent(context, CapturedPictureActivity.class);

@@ -5,4 +5,9 @@
     <color name="colorAccent">#b35f24</color>
     <color name="transparent_pink">#affa1c96</color>
     <color name="transparent_green">#af2bd600</color>
+
+
+    <color name="control_background">#cc4285f4</color>
+
+
 </resources>

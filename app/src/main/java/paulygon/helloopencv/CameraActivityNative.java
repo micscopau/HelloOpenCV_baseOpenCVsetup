@@ -33,7 +33,7 @@ public class CameraActivityNative extends AppCompatActivity {
     private FrameLayout cameraPreviewLayout;
     private ImageView capturedImageHolder;
 
-    private static String TAG = "CameraActivity";
+    private static String TAG = "OpenCVActivity";
     Mat mRgba, imgGray, imgCanny, imgCircles;
     Mat mRgbaF, mRgbaT; //o
     int circleCount = 0;
