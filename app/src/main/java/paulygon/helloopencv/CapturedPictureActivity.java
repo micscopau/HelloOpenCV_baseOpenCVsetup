@@ -5,6 +5,8 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.hardware.Camera;
+import android.net.Uri;
+import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -26,6 +28,8 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.File;
+
 public class CapturedPictureActivity extends AppCompatActivity {
 
     private static String TAG = "CapturedPictureActivity";
@@ -40,6 +44,7 @@ public class CapturedPictureActivity extends AppCompatActivity {
 
     Mat mRgbaF, mRgbaT; //o
 
+    int circleCountOriginal = 0;
     int circleCount = 0;
 
     private Bitmap circleBitmap;
@@ -92,6 +97,8 @@ public class CapturedPictureActivity extends AppCompatActivity {
 
         inIntent = getIntent();
 
+        /*
+        // calling from Camera2activity (my code)
         imageBytes = inIntent.getByteArrayExtra(Camera2Activity.CAPTURED_IMAGE);
         bitmapRotation = inIntent.getFloatExtra(Camera2Activity.BITMAP_ROTATION, 0);
 
@@ -99,11 +106,31 @@ public class CapturedPictureActivity extends AppCompatActivity {
         Bitmap rotatedBitmap = RotateBitmap(bitmap, bitmapRotation);
 
         circleBitmap = circleCounterHelper(rotatedBitmap);
+        */
 
-        //imageView.setImageBitmap(rotatedBitmap);
-        imageView.setImageBitmap(circleBitmap);
+        /*
+        //Calling from Camera2BasicFragment
+        imageBytes = inIntent.getByteArrayExtra(Camera2BasicFragment.CAPTURED_IMAGE);
+        Bitmap bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
+        circleBitmap = circleCounterHelper(bitmap);
+        */
 
-        updatePipCount();
+        Uri imageUri = Uri.parse(inIntent.getStringExtra(Camera2BasicFragment.FILE_URI));
+        int rotation = inIntent.getIntExtra(Camera2BasicFragment.ROTATION, 0);
+
+        try {
+            Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
+            bitmap = RotateBitmap(bitmap, rotation);
+
+            circleBitmap = circleCounterHelper(bitmap);
+
+            //imageView.setImageBitmap(rotatedBitmap);
+            imageView.setImageBitmap(circleBitmap);
+            updatePipCount();
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
 
     }
 
@@ -113,7 +140,8 @@ public class CapturedPictureActivity extends AppCompatActivity {
     }
 
     public void fabCameraClick(View view) {
-        Intent outIntent = new Intent(this, Camera2Activity.class);
+        //Intent outIntent = new Intent(this, Camera2Activity.class);
+        Intent outIntent = new Intent(this, CameraActivity.class);
         startActivity(outIntent);
     }
 
@@ -134,6 +162,11 @@ public class CapturedPictureActivity extends AppCompatActivity {
 
     public void bttnPlusFiftyClick(View view) {
         circleCount+=50;
+        updatePipCount();
+    }
+
+    public void bttnReset(View view) {
+        circleCount = circleCountOriginal;
         updatePipCount();
     }
 
@@ -187,14 +220,16 @@ public class CapturedPictureActivity extends AppCompatActivity {
                 Point center = new Point((int) circleVec[0], (int) circleVec[1]);
                 int radius = (int) circleVec[2];
 
-                Imgproc.circle(input, center, 3, new Scalar(255,255,255),5);
-                Imgproc.circle(input, center, radius, new Scalar(255,255,255), 2);
+                Imgproc.circle(input, center, 3, new Scalar(255,255,255),75); //center
+                //Imgproc.circle(input, center, radius, new Scalar(255,255,255), 50); //ring
 
             }
 
             //Log.i(TAG, " Count of circles: " + circleCount);
 
         }
+
+        circleCountOriginal = circleCount;
 
         Utils.matToBitmap(input, bmp32);
 
@@ -217,6 +252,5 @@ public class CapturedPictureActivity extends AppCompatActivity {
         }
 
     }
-
 
 }

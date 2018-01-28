@@ -22,8 +22,11 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
@@ -41,6 +44,7 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -57,11 +61,14 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.Toast;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -74,12 +81,24 @@ import java.util.concurrent.TimeUnit;
 public class Camera2BasicFragment extends Fragment
         implements View.OnClickListener, ActivityCompat.OnRequestPermissionsResultCallback {
 
+    public static final String CAPTURED_IMAGE = "paulygon.Camera2Fragment.CAPTURED_IMAGE";
+    public static final String FILE_URI = "paulygon.Camera2Fragment.FILE_URI";
+    public static final String ROTATION = "paulygon.Camera2Fragment.ROTATION";
+    private ImageConverter imageConverter;
+    private byte[] bytesImage;
+    private final Context context = this.getContext();
+    private Bitmap bitmapImage = null;
+
+    private String flashMode = "auto";
+
     /**
      * Conversion from screen rotation to JPEG orientation.
      */
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
     private static final int REQUEST_CAMERA_PERMISSION = 1;
     private static final String FRAGMENT_DIALOG = "dialog";
+
+
 
     static {
         ORIENTATIONS.append(Surface.ROTATION_0, 90);
@@ -88,45 +107,31 @@ public class Camera2BasicFragment extends Fragment
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
 
-    /**
-     * Tag for the {@link Log}.
-     */
-    private static final String TAG = "Camera2BasicFragment";
+    private static final String TAG = "Camera2BasicFragment"; //Tag for the {@link Log}.
 
-    /**
-     * Camera state: Showing camera preview.
-     */
-    private static final int STATE_PREVIEW = 0;
+    private static final int STATE_PREVIEW = 0; //Camera state: Showing camera preview.
+    private static final int STATE_WAITING_LOCK = 1; //* Camera state: Waiting for the focus to be locked.
+    private static final int STATE_WAITING_PRECAPTURE = 2; //* Camera state: Waiting for the exposure to be precapture state.
+    private static final int STATE_WAITING_NON_PRECAPTURE = 3; //     * Camera state: Waiting for the exposure state to be something other than precapture.
+    private static final int STATE_PICTURE_TAKEN = 4; //* Camera state: Picture was taken.
+    private static final int MAX_PREVIEW_WIDTH = 1920; //* Max preview width that is guaranteed by Camera2 API
+    private static final int MAX_PREVIEW_HEIGHT = 1080; //     * Max preview height that is guaranteed by Camera2 API
 
-    /**
-     * Camera state: Waiting for the focus to be locked.
-     */
-    private static final int STATE_WAITING_LOCK = 1;
-
-    /**
-     * Camera state: Waiting for the exposure to be precapture state.
-     */
-    private static final int STATE_WAITING_PRECAPTURE = 2;
-
-    /**
-     * Camera state: Waiting for the exposure state to be something other than precapture.
-     */
-    private static final int STATE_WAITING_NON_PRECAPTURE = 3;
-
-    /**
-     * Camera state: Picture was taken.
-     */
-    private static final int STATE_PICTURE_TAKEN = 4;
-
-    /**
-     * Max preview width that is guaranteed by Camera2 API
-     */
-    private static final int MAX_PREVIEW_WIDTH = 1920;
-
-    /**
-     * Max preview height that is guaranteed by Camera2 API
-     */
-    private static final int MAX_PREVIEW_HEIGHT = 1080;
+    private String mCameraId; //* ID of the current {@link CameraDevice}.
+    private AutoFitTextureView mTextureView; //* An {@link AutoFitTextureView} for camera preview.
+    private CameraCaptureSession mCaptureSession; //* A {@link CameraCaptureSession } for camera preview.
+    private CameraDevice mCameraDevice; //* A reference to the opened {@link CameraDevice}.
+    private Size mPreviewSize; //     * The {@link android.util.Size} of camera preview.
+    private HandlerThread mBackgroundThread; //* An additional thread for running tasks that shouldn't block the UI.
+    private Handler mBackgroundHandler; //      * A {@link Handler} for running tasks in the background.
+    private ImageReader mImageReader; // * An {@link ImageReader} that handles still image capture.
+    private File mFile; //* This is the output file for our picture.
+    private CaptureRequest.Builder mPreviewRequestBuilder; //     * {@link CaptureRequest.Builder} for the camera preview
+    private CaptureRequest mPreviewRequest; //     * {@link CaptureRequest} generated by {@link #mPreviewRequestBuilder}
+    private int mState = STATE_PREVIEW; //     * The current state of camera state for taking pictures. * @see #mCaptureCallback
+    private Semaphore mCameraOpenCloseLock = new Semaphore(1); //     * A {@link Semaphore} to prevent the app from exiting before closing the camera.
+    private boolean mFlashSupported; //* Whether the current camera device supports Flash or not.
+    private int mSensorOrientation; //* Orientation of the camera sensor
 
     /**
      * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
@@ -156,30 +161,6 @@ public class Camera2BasicFragment extends Fragment
 
     };
 
-    /**
-     * ID of the current {@link CameraDevice}.
-     */
-    private String mCameraId;
-
-    /**
-     * An {@link AutoFitTextureView} for camera preview.
-     */
-    private AutoFitTextureView mTextureView;
-
-    /**
-     * A {@link CameraCaptureSession } for camera preview.
-     */
-    private CameraCaptureSession mCaptureSession;
-
-    /**
-     * A reference to the opened {@link CameraDevice}.
-     */
-    private CameraDevice mCameraDevice;
-
-    /**
-     * The {@link android.util.Size} of camera preview.
-     */
-    private Size mPreviewSize;
 
     /**
      * {@link CameraDevice.StateCallback} is called when {@link CameraDevice} changes its state.
@@ -214,25 +195,6 @@ public class Camera2BasicFragment extends Fragment
 
     };
 
-    /**
-     * An additional thread for running tasks that shouldn't block the UI.
-     */
-    private HandlerThread mBackgroundThread;
-
-    /**
-     * A {@link Handler} for running tasks in the background.
-     */
-    private Handler mBackgroundHandler;
-
-    /**
-     * An {@link ImageReader} that handles still image capture.
-     */
-    private ImageReader mImageReader;
-
-    /**
-     * This is the output file for our picture.
-     */
-    private File mFile;
 
     /**
      * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
@@ -245,41 +207,14 @@ public class Camera2BasicFragment extends Fragment
         public void onImageAvailable(ImageReader reader) {
             mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile));
             //MSP - update this to call Captured activity?
+
+            //imageConverter = new ImageConverter(reader.acquireNextImage());
+            //mBackgroundHandler.post(imageConverter);
+
         }
 
     };
 
-    /**
-     * {@link CaptureRequest.Builder} for the camera preview
-     */
-    private CaptureRequest.Builder mPreviewRequestBuilder;
-
-    /**
-     * {@link CaptureRequest} generated by {@link #mPreviewRequestBuilder}
-     */
-    private CaptureRequest mPreviewRequest;
-
-    /**
-     * The current state of camera state for taking pictures.
-     *
-     * @see #mCaptureCallback
-     */
-    private int mState = STATE_PREVIEW;
-
-    /**
-     * A {@link Semaphore} to prevent the app from exiting before closing the camera.
-     */
-    private Semaphore mCameraOpenCloseLock = new Semaphore(1);
-
-    /**
-     * Whether the current camera device supports Flash or not.
-     */
-    private boolean mFlashSupported;
-
-    /**
-     * Orientation of the camera sensor
-     */
-    private int mSensorOrientation;
 
     /**
      * A {@link CameraCaptureSession.CaptureCallback} that handles events related to JPEG capture.
@@ -429,6 +364,7 @@ public class Camera2BasicFragment extends Fragment
     public void onViewCreated(final View view, Bundle savedInstanceState) {
         view.findViewById(R.id.picture).setOnClickListener(this);
         view.findViewById(R.id.info).setOnClickListener(this);
+        view.findViewById(R.id.flash).setOnClickListener(this);
         mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
     }
 
@@ -709,8 +645,10 @@ public class Camera2BasicFragment extends Fragment
                                 // Auto focus should be continuous for camera preview.
                                 mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                                         CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+
                                 // Flash is automatically enabled when necessary.
                                 setAutoFlash(mPreviewRequestBuilder);
+                                setFlashMode(mPreviewRequestBuilder);
 
                                 // Finally, we start displaying the camera preview.
                                 mPreviewRequest = mPreviewRequestBuilder.build();
@@ -826,7 +764,10 @@ public class Camera2BasicFragment extends Fragment
             // Use the same AE and AF modes as the preview.
             captureBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                     CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-            setAutoFlash(captureBuilder);
+
+
+            //setAutoFlash(captureBuilder);
+            setFlashMode(captureBuilder);
 
             // Orientation
             int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
@@ -839,9 +780,25 @@ public class Camera2BasicFragment extends Fragment
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session,
                                                @NonNull CaptureRequest request,
                                                @NonNull TotalCaptureResult result) {
-                    showToast("Saved: " + mFile);
-                    Log.d(TAG, mFile.toString());
+                    //MSP code change here... image not saved, instead call new activity
+                    //showToast("Saved: " + mFile);
+                    //Log.d(TAG, mFile.toString());
+
+                    //bytesImage = imageConverter.getImageBytes();
+
+                    //System.out.println("MSPDEBUG : bytesImage.length " + bytesImage.length);
+
+                    Uri uriFile = Uri.fromFile(mFile);
+
                     unlockFocus();
+
+                    Intent outIntent = new Intent(getActivity(), CapturedPictureActivity.class);
+                    outIntent.putExtra(FILE_URI, uriFile.toString());
+                    outIntent.putExtra(ROTATION, mSensorOrientation);
+                    //outIntent.putExtra(CAPTURED_IMAGE, bytesImage);
+                    //outIntent.putExtra(FILE_URI, mFile);
+                    startActivity(outIntent);
+
                 }
             };
 
@@ -876,7 +833,10 @@ public class Camera2BasicFragment extends Fragment
             // Reset the auto-focus trigger
             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
                     CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+
             setAutoFlash(mPreviewRequestBuilder);
+            setFlashMode(mPreviewRequestBuilder);
+
             mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,
                     mBackgroundHandler);
             // After this, the camera will go back to the normal state of preview.
@@ -888,14 +848,18 @@ public class Camera2BasicFragment extends Fragment
         }
     }
 
+
+
     @Override
     public void onClick(View view) {
+
         switch (view.getId()) {
             case R.id.picture: {
                 takePicture();
                 break;
             }
             case R.id.info: {
+                System.out.println("MSPDEBUG info button pressed.");
                 Activity activity = getActivity();
                 if (null != activity) {
                     new AlertDialog.Builder(activity)
@@ -905,15 +869,134 @@ public class Camera2BasicFragment extends Fragment
                 }
                 break;
             }
+            case R.id.flash: {
+                System.out.println("MSPDEBUG flash button pressed.");
+
+                Activity activity = getActivity();
+                ImageView img = (ImageView) activity.findViewById(R.id.flash);
+
+                if( flashMode.equals("auto")){
+                    flashMode = "on";
+                    img.setImageDrawable(ContextCompat.getDrawable(activity, R.drawable.flash_on));
+                    setFlashMode();
+                }
+                else if (flashMode.equals("on") ){
+                    flashMode = "off";
+                    img.setImageDrawable(ContextCompat.getDrawable(activity, R.drawable.flash_off));
+                    setFlashMode();
+                }
+                else{
+                    flashMode = "auto";
+                    img.setImageDrawable(ContextCompat.getDrawable(activity, R.drawable.flash_auto));
+                    setFlashMode();
+                }
+            }
         }
     }
 
-    private void setAutoFlash(CaptureRequest.Builder requestBuilder) {
+    private void setFlashMode(CaptureRequest.Builder builder){
+        switch (flashMode){
+            case "auto": {
+                setAutoFlash(builder);
+                break;
+            }
+            case "on": {
+                setFlashOn(builder);
+                break;
+            }
+            case "off":{
+                setFlashOff(builder);
+                break;
+            }
+        }
+    }
+
+    private void setFlashMode(){
+        CaptureRequest.Builder builder = mPreviewRequestBuilder;
+        switch (flashMode){
+            case "auto": {
+                setAutoFlash(builder);
+                break;
+            }
+            case "on": {
+                setFlashOn(builder);
+                break;
+            }
+            case "off":{
+                setFlashOff(builder);
+                break;
+            }
+        }
+    }
+
+    private void setAutoFlash(CaptureRequest.Builder builder) {
         if (mFlashSupported) {
-            requestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
+            builder.set(CaptureRequest.CONTROL_AE_MODE,
                     CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
         }
     }
+
+    private void setFlashOn(CaptureRequest.Builder builder){
+        try{
+            //requestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH);
+            builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_TORCH);
+
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    private void setFlashOff(CaptureRequest.Builder builder){
+        try {
+            //requestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+            builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF);
+
+        }catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static class ImageConverter implements Runnable{
+
+        private final Image mImage;
+        private Bitmap mBitmap = null;
+        private byte[] imageBytes;
+
+        ImageConverter(Image image){
+            mImage = image;
+        }
+
+        @Override
+            public void run(){
+                System.out.println("MSPDEBUG : Run() executing");
+                ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
+
+                byte[] bytes = new byte[buffer.capacity()];
+                buffer.get(bytes);
+
+                //mBitmap = BitmapFactory.decodeByteArray(bytes, 0 , bytes.length, null);
+
+                System.out.println("MSPDEBUG: bytes " + bytes.length);
+
+                //ByteArrayOutputStream bStream = new ByteArrayOutputStream();
+                //mBitmap.compress(Bitmap.CompressFormat.PNG, 100, bStream);
+                //byte[] bytesCompressed = bStream.toByteArray();
+
+                //imageBytes = bytesCompressed;
+                imageBytes = bytes;
+
+                System.out.println("MSPDEBUG: bytesCompressed " + imageBytes.length);
+            }
+
+        public Bitmap getBitmap() {
+            return mBitmap;
+        }
+
+        public byte[] getImageBytes(){
+            return imageBytes;
+        }
+    }
+
 
     /**
      * Saves a JPEG {@link Image} into the specified {@link File}.
