@@ -81,6 +81,8 @@ import java.util.concurrent.TimeUnit;
 public class Camera2BasicFragment extends Fragment
         implements View.OnClickListener, ActivityCompat.OnRequestPermissionsResultCallback {
 
+    private static final String TAG = "Camera2BasicFragment"; //Tag for the {@link Log}.
+
     public static final String CAPTURED_IMAGE = "paulygon.Camera2Fragment.CAPTURED_IMAGE";
     public static final String FILE_URI = "paulygon.Camera2Fragment.FILE_URI";
     public static final String ROTATION = "paulygon.Camera2Fragment.ROTATION";
@@ -107,7 +109,7 @@ public class Camera2BasicFragment extends Fragment
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
 
-    private static final String TAG = "Camera2BasicFragment"; //Tag for the {@link Log}.
+
 
     private static final int STATE_PREVIEW = 0; //Camera state: Showing camera preview.
     private static final int STATE_WAITING_LOCK = 1; //* Camera state: Waiting for the focus to be locked.
@@ -447,7 +449,7 @@ public class Camera2BasicFragment extends Fragment
                     continue;
                 }
 
-                //MSP Code change here to capture image only as large as preview? v
+
                 // For still image captures, we use the largest available size.
                 Size largest = Collections.max(
                         Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)),
@@ -522,6 +524,12 @@ public class Camera2BasicFragment extends Fragment
                 // Check if the flash is supported.
                 Boolean available = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
                 mFlashSupported = available == null ? false : available;
+
+                /*
+                if(mFlashSupported) {
+                    manager.setTorchMode(cameraId,true);
+                }
+                */
 
                 mCameraId = cameraId;
                 return;
@@ -626,6 +634,9 @@ public class Camera2BasicFragment extends Fragment
             // We set up a CaptureRequest.Builder with the output Surface.
             mPreviewRequestBuilder
                     = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+
+            //setFlashMode(mPreviewRequestBuilder); //msp added line
+
             mPreviewRequestBuilder.addTarget(surface);
 
             // Here, we create a CameraCaptureSession for camera preview.
@@ -646,9 +657,11 @@ public class Camera2BasicFragment extends Fragment
                                 mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                                         CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
 
+                                System.out.println("MSPDEBUG: createCameraPreview / CameraCaptureSession.StateCallback / onConfigured");
                                 // Flash is automatically enabled when necessary.
-                                setAutoFlash(mPreviewRequestBuilder);
+                                //setAutoFlash(mPreviewRequestBuilder); //msp commented out line with above setFlashMode added
                                 setFlashMode(mPreviewRequestBuilder);
+
 
                                 // Finally, we start displaying the camera preview.
                                 mPreviewRequest = mPreviewRequestBuilder.build();
@@ -765,13 +778,17 @@ public class Camera2BasicFragment extends Fragment
             captureBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                     CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
 
-
+            System.out.println("MSPDEBUG: captureStillPicture");
             //setAutoFlash(captureBuilder);
             setFlashMode(captureBuilder);
+
+            System.out.println("MSPDEBUG: captureStillPicture setFlashMode completed");
 
             // Orientation
             int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(rotation));
+
+            System.out.println("MSPDEBUG : CaptureRequest.JPEG_ORIENTATION completed");
 
             CameraCaptureSession.CaptureCallback CaptureCallback
                     = new CameraCaptureSession.CaptureCallback() {
@@ -788,6 +805,8 @@ public class Camera2BasicFragment extends Fragment
 
                     //System.out.println("MSPDEBUG : bytesImage.length " + bytesImage.length);
 
+                    System.out.println("MSPDEBUG : pre - unlockFocus");
+
                     Uri uriFile = Uri.fromFile(mFile);
 
                     unlockFocus();
@@ -795,6 +814,7 @@ public class Camera2BasicFragment extends Fragment
                     Intent outIntent = new Intent(getActivity(), CapturedPictureActivity.class);
                     outIntent.putExtra(FILE_URI, uriFile.toString());
                     outIntent.putExtra(ROTATION, mSensorOrientation);
+                    outIntent.putExtra("TAG", TAG);
                     //outIntent.putExtra(CAPTURED_IMAGE, bytesImage);
                     //outIntent.putExtra(FILE_URI, mFile);
                     startActivity(outIntent);
@@ -802,9 +822,19 @@ public class Camera2BasicFragment extends Fragment
                 }
             };
 
+            System.out.println("MSPDEBUG : pre - stopRepeating");
+
             mCaptureSession.stopRepeating();
+
+            System.out.println("MSPDEBUG : pre - abortCaptures");
+
             mCaptureSession.abortCaptures();
+
+            System.out.println("MSPDEBUG : pre - capture");
             mCaptureSession.capture(captureBuilder.build(), CaptureCallback, null);
+
+            System.out.println("MSPDEBUG : post - capture");
+
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -829,12 +859,15 @@ public class Camera2BasicFragment extends Fragment
      * finished.
      */
     private void unlockFocus() {
+        System.out.println("MSPDEBUG : unLockFocus");
         try {
+            System.out.println("MSPDEBUG : pre reset auto focus trigger");
             // Reset the auto-focus trigger
             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
                     CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
 
-            setAutoFlash(mPreviewRequestBuilder);
+            System.out.println("MSPDEBUG: unlock focus setFlashMode");
+            //setAutoFlash(mPreviewRequestBuilder);
             setFlashMode(mPreviewRequestBuilder);
 
             mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,
@@ -871,75 +904,98 @@ public class Camera2BasicFragment extends Fragment
             }
             case R.id.flash: {
                 System.out.println("MSPDEBUG flash button pressed.");
+                changeFlashMode();
 
-                Activity activity = getActivity();
-                ImageView img = (ImageView) activity.findViewById(R.id.flash);
+                break;
+            }
+        }
+    }
 
-                if( flashMode.equals("auto")){
-                    flashMode = "on";
-                    img.setImageDrawable(ContextCompat.getDrawable(activity, R.drawable.flash_on));
-                    setFlashMode();
-                }
-                else if (flashMode.equals("on") ){
-                    flashMode = "off";
-                    img.setImageDrawable(ContextCompat.getDrawable(activity, R.drawable.flash_off));
-                    setFlashMode();
-                }
-                else{
-                    flashMode = "auto";
-                    img.setImageDrawable(ContextCompat.getDrawable(activity, R.drawable.flash_auto));
-                    setFlashMode();
-                }
+    private void changeFlashMode() {
+        Activity activity = getActivity();
+        ImageView img = (ImageView) activity.findViewById(R.id.flash);
+
+        switch (flashMode) {
+            case "auto": {
+                flashMode = "on";
+                img.setImageDrawable(ContextCompat.getDrawable(activity, R.drawable.flash_on));
+                onResume();
+                break;
+            }
+            case "on": {
+                flashMode = "off";
+                img.setImageDrawable(ContextCompat.getDrawable(activity, R.drawable.flash_off));
+                onResume();
+                break;
+            }
+            case "off": {
+                flashMode = "auto";
+                img.setImageDrawable(ContextCompat.getDrawable(activity, R.drawable.flash_auto));
+                onResume();
+                break;
             }
         }
     }
 
     private void setFlashMode(CaptureRequest.Builder builder){
+        /*
+        if (null == builder) {
+            System.out.println("MSPDEBUG : builder == null");
+            builder = mPreviewRequestBuilder;
+        }else{
+            System.out.println("MSPDEBUG : builder == " + builder.toString());
+        }
+        */
+
+        CameraManager manager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
+
         switch (flashMode){
             case "auto": {
+                //System.out.println("MSPDEBUG: setFlashAuto");
                 setAutoFlash(builder);
+                //manager.setTorchMode(mCameraId,true);
+                System.out.println("MSPDEBUG: setFlashAuto completed");
                 break;
             }
             case "on": {
+                //System.out.println("MSPDEBUG: setFlashOn");
                 setFlashOn(builder);
+                //manager.setTorchMode(mCameraId,false);
+                System.out.println("MSPDEBUG: setFlashOn completed");
                 break;
             }
             case "off":{
+                //System.out.println("MSPDEBUG: setFlashOff");
                 setFlashOff(builder);
+                //manager.setTorchMode(mCameraId,false);
+                System.out.println("MSPDEBUG: setFlashOff completed");
                 break;
             }
         }
     }
 
-    private void setFlashMode(){
-        CaptureRequest.Builder builder = mPreviewRequestBuilder;
-        switch (flashMode){
-            case "auto": {
-                setAutoFlash(builder);
-                break;
-            }
-            case "on": {
-                setFlashOn(builder);
-                break;
-            }
-            case "off":{
-                setFlashOff(builder);
-                break;
-            }
-        }
-    }
+
 
     private void setAutoFlash(CaptureRequest.Builder builder) {
-        if (mFlashSupported) {
-            builder.set(CaptureRequest.CONTROL_AE_MODE,
-                    CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
+        //if (mFlashSupported) {
+        try{
+            builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
+            //mCaptureSession.setRepeatingRequest(builder.build(), null, null);
+        } catch(Exception e){
+            e.printStackTrace();
         }
     }
 
     private void setFlashOn(CaptureRequest.Builder builder){
         try{
-            //requestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH);
+            //System.out.println("MSPDEBUG: setFlashOn pre Control_AE_MODE_ON_ALWAYS_FLASH");
+            //builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH);
+
+            //System.out.println("MSPDEBUG: setFlashOn pre FLASH_MODE_TORCH");
             builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_TORCH);
+
+            //System.out.println("MSPDEBUG: setFlashOn pre mCaptureSession.SetRepeatingRequest");
+            mCaptureSession.setRepeatingRequest(builder.build(), null, null);
 
         }catch (Exception e){
             e.printStackTrace();
@@ -948,8 +1004,10 @@ public class Camera2BasicFragment extends Fragment
 
     private void setFlashOff(CaptureRequest.Builder builder){
         try {
-            //requestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+            //builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+
             builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF);
+            mCaptureSession.setRepeatingRequest(builder.build(), null, null);
 
         }catch (Exception e) {
             e.printStackTrace();

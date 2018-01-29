@@ -10,6 +10,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
+import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -294,21 +295,6 @@ public class Camera2Activity extends AppCompatActivity {
         try {
             CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraDevice.getId());
 
-            /*
-            Size[] jpegSizes = null;
-
-            if (characteristics != null) {
-                jpegSizes = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(ImageFormat.JPEG);
-            }
-
-            int width = 640;
-            int height = 480;
-
-            if (jpegSizes != null && 0 < jpegSizes.length) {
-                width = jpegSizes[0].getWidth();
-                height = jpegSizes[0].getHeight();
-            }*/
-
             ImageReader reader = ImageReader.newInstance(imageDimension.getWidth(), imageDimension.getHeight(), ImageFormat.JPEG, 1);
 
             List<Surface> outputSurfaces = new ArrayList<Surface>(2);
@@ -362,6 +348,7 @@ public class Camera2Activity extends AppCompatActivity {
                     Intent outIntent = new Intent(context, CapturedPictureActivity.class);
                     outIntent.putExtra(CAPTURED_IMAGE, imageBytes);
                     outIntent.putExtra(BITMAP_ROTATION, bitmapRotation);
+                    outIntent.putExtra("TAG", TAG);
                     startActivity(outIntent);
 
                 }

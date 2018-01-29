@@ -97,17 +97,20 @@ public class CapturedPictureActivity extends AppCompatActivity {
 
         inIntent = getIntent();
 
-        /*
-        // calling from Camera2activity (my code)
-        imageBytes = inIntent.getByteArrayExtra(Camera2Activity.CAPTURED_IMAGE);
-        bitmapRotation = inIntent.getFloatExtra(Camera2Activity.BITMAP_ROTATION, 0);
+        String intentTag = inIntent.getStringExtra("TAG");
 
-        Bitmap bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
-        Bitmap rotatedBitmap = RotateBitmap(bitmap, bitmapRotation);
+        if (intentTag.equals("Camera2Activity")) {
+            // calling from Camera2activity (my code)
+            imageBytes = inIntent.getByteArrayExtra(Camera2Activity.CAPTURED_IMAGE);
+            bitmapRotation = inIntent.getFloatExtra(Camera2Activity.BITMAP_ROTATION, 0);
 
-        circleBitmap = circleCounterHelper(rotatedBitmap);
-        */
+            Bitmap bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
+            Bitmap rotatedBitmap = RotateBitmap(bitmap, bitmapRotation);
 
+            circleBitmap = circleCounterHelper(rotatedBitmap);
+
+        }
+        else if (intentTag.equals("Camera2BasicFragment")) {
         /*
         //Calling from Camera2BasicFragment
         imageBytes = inIntent.getByteArrayExtra(Camera2BasicFragment.CAPTURED_IMAGE);
@@ -115,22 +118,22 @@ public class CapturedPictureActivity extends AppCompatActivity {
         circleBitmap = circleCounterHelper(bitmap);
         */
 
-        Uri imageUri = Uri.parse(inIntent.getStringExtra(Camera2BasicFragment.FILE_URI));
-        int rotation = inIntent.getIntExtra(Camera2BasicFragment.ROTATION, 0);
+            Uri imageUri = Uri.parse(inIntent.getStringExtra(Camera2BasicFragment.FILE_URI));
+            int rotation = inIntent.getIntExtra(Camera2BasicFragment.ROTATION, 0);
 
-        try {
-            Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
-            bitmap = RotateBitmap(bitmap, rotation);
+            try {
+                Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
+                bitmap = RotateBitmap(bitmap, rotation);
 
-            circleBitmap = circleCounterHelper(bitmap);
+                circleBitmap = circleCounterHelper(bitmap);
 
-            //imageView.setImageBitmap(rotatedBitmap);
-            imageView.setImageBitmap(circleBitmap);
-            updatePipCount();
-
-        }catch(Exception e){
-            e.printStackTrace();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
+
+        imageView.setImageBitmap(circleBitmap);
+        updatePipCount();
 
     }
 
