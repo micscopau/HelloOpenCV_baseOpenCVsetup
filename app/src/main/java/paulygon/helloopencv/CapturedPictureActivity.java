@@ -46,8 +46,10 @@ public class CapturedPictureActivity extends AppCompatActivity {
 
     int circleCountOriginal = 0;
     int circleCount = 0;
+    int ellipseCount = 0;
 
     private Bitmap circleBitmap;
+    private Bitmap ellipseBitmap;
 
 
     BaseLoaderCallback mLoaderCallBack = new BaseLoaderCallback(this) {
@@ -194,24 +196,58 @@ public class CapturedPictureActivity extends AppCompatActivity {
         Bitmap bmp32 = bitmap.copy(Bitmap.Config.ARGB_8888, true);
         Utils.bitmapToMat(bmp32, input);
 
-        Mat blur = new Mat();
-        Mat circles = new Mat();
+        Mat matBlur = new Mat();
+        Mat matCircles = new Mat();
+        Mat matThresh = new Mat();
+        Mat matOpened = new Mat();
+        Mat matClosed = new Mat();
+
+        /*
+        //Refinement for open/close morphology kernel (I think)
+        int morph_elem = 0;
+        int morph_size = 0;
+        int morph_operator = 0;
+        Mat kernel = Imgproc.getStructuringElement( morph_elem, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ));
+        */
+        Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(5,5));
 
         Imgproc.cvtColor(input, imgGray, Imgproc.COLOR_RGB2GRAY,0);
 
+        //System.out.println("MSPDEBUG : pre thresholding");
+        //Imgproc.threshold(imgGray, matThresh,127,255,Imgproc.THRESH_BINARY);
+        //Imgproc.threshold(imgGray, matThresh,154,255,Imgproc.THRESH_BINARY_INV);
+
+        //Imgproc.adaptiveThreshold(imgGray, matThresh, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY,11,2);
+        //Imgproc.adaptiveThreshold(imgGray, matThresh, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY,11,2);
+        //Imgproc.adaptiveThreshold(imgGray, matThresh, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY,49,2);
+
+        //System.out.println("MSPDEBUG : post thresholding");
+
+        //Imgproc.morphologyEx(matThresh, matOpened, Imgproc.MORPH_OPEN, new Mat());
+        //Imgproc.morphologyEx(matThresh, matClosed, Imgproc.MORPH_CLOSE, new Mat());
+
+        //Imgproc.morphologyEx(matThresh, matOpened, Imgproc.MORPH_OPEN, kernel);
+        //Imgproc.morphologyEx(matThresh, matClosed, Imgproc.MORPH_CLOSE, kernel);
+
+
+
         //Imgproc.blur(input, blur, new Size(7,7), new Point(2,2));
-        Imgproc.blur(imgGray, blur, new Size(7,7)); //using default anchor of -1,-1 (kernel center)
+        //Imgproc.blur(imgGray, matBlur, new Size(7,7)); //using default anchor of -1,-1 (kernel center)
+        //Imgproc.HoughCircles(matBlur, matCircles, Imgproc.CV_HOUGH_GRADIENT, 2, 50, 100, 90, 0, 100);
 
-        Imgproc.HoughCircles(blur, circles, Imgproc.CV_HOUGH_GRADIENT, 2, 50, 100, 90, 0, 100);
+        Imgproc.HoughCircles(imgGray, matCircles, Imgproc.CV_HOUGH_GRADIENT, 2, 50, 100, 90, 1, 100);
+        //Imgproc.HoughCircles(matThresh, matCircles, Imgproc.CV_HOUGH_GRADIENT, 2, 50, 100, 90, 0, 100);
 
-        //Log.i(TAG, String.valueOf("size: " + circles.cols()) + ", " + String.valueOf(circles.rows()));
+        //Log.i(TAG, String.valueOf("size: " + circles.cols()) + ", " + String.valueOf(circles.rows()))
 
         circleCount = 0;
 
-        if(circles.cols() >0){
+        System.out.println("MSPDEBUG : pre circle count");
+
+        if(matCircles.cols() >0){
             //for (int i = 0 ; i < Math.min(circles.cols(), 5) ; i++){
-            for (int i = 0 ; i < circles.cols() ; i++){
-                double circleVec[] = circles.get(0,i);
+            for (int i = 0 ; i < matCircles.cols() ; i++){
+                double circleVec[] = matCircles.get(0,i);
 
                 circleCount++;
                 //circleCount = circleVec[2]
@@ -223,8 +259,8 @@ public class CapturedPictureActivity extends AppCompatActivity {
                 Point center = new Point((int) circleVec[0], (int) circleVec[1]);
                 int radius = (int) circleVec[2];
 
-                Imgproc.circle(input, center, 3, new Scalar(255,255,255),75); //center
-                //Imgproc.circle(input, center, radius, new Scalar(255,255,255), 50); //ring
+                Imgproc.circle(input, center, 1, new Scalar(255,255,255),110); //center
+                Imgproc.circle(input, center, 60, new Scalar(0,0,0), 10); //ring
 
             }
 
@@ -232,9 +268,11 @@ public class CapturedPictureActivity extends AppCompatActivity {
 
         }
 
+        System.out.println("MSPDEBUG : post circle count");
         circleCountOriginal = circleCount;
 
         Utils.matToBitmap(input, bmp32);
+        //Utils.matToBitmap(matClosed, bmp32);
 
         return bmp32;
 
