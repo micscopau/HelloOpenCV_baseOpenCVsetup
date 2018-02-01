@@ -30,6 +30,9 @@ import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
 
+import static org.opencv.core.Core.BORDER_DEFAULT;
+
+
 public class CapturedPictureActivity extends AppCompatActivity {
 
     private static String TAG = "CapturedPictureActivity";
@@ -197,10 +200,14 @@ public class CapturedPictureActivity extends AppCompatActivity {
         Utils.bitmapToMat(bmp32, input);
 
         Mat matBlur = new Mat();
+        Mat matSharp = new Mat();
+        Mat matFilter = new Mat();
         Mat matCircles = new Mat();
         Mat matThresh = new Mat();
         Mat matOpened = new Mat();
         Mat matClosed = new Mat();
+        Mat matCanny = new Mat();
+        Mat matOutput = new Mat();
 
         /*
         //Refinement for open/close morphology kernel (I think)
@@ -209,13 +216,69 @@ public class CapturedPictureActivity extends AppCompatActivity {
         int morph_operator = 0;
         Mat kernel = Imgproc.getStructuringElement( morph_elem, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ));
         */
-        Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(5,5));
+        //Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(5,5));
+        Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(5,5));
+        int kernelLength = 99;
+
+
+        //Imgproc.cvtColor(input, imgGray, Imgproc.COLOR_RGB2GRAY,0);
+
+
+        //Imgproc.Canny(imgGray, matCanny, 20, 200, 3, true);
+
+
+        //Imgproc.blur(input, matBlur, new Size(7,7), new Point(2,2));
+        //Imgproc.blur(imgGray, matBlur, new Size(5,5)); //using default anchor of -1,-1 (kernel center)
+
+        /*
+        //This combination worked!
+        Imgproc.cvtColor(input, imgGray, Imgproc.COLOR_RGB2GRAY,0);
+        Imgproc.bilateralFilter(imgGray, matFilter, 30, 90, 5);
+        */
 
         Imgproc.cvtColor(input, imgGray, Imgproc.COLOR_RGB2GRAY,0);
+        //Imgproc.bilateralFilter(imgGray, matFilter, -1, 60, 60);
+        //Imgproc.bilateralFilter(imgGray, matFilter, kernelLength, kernelLength*2, kernelLength/2);
+
+        //Imgproc.bilateralFilter(imgGray, matFilter, 60, 50, 25); //works but slowly
+        //Imgproc.bilateralFilter(imgGray, matFilter, 40, 50, 25); //little bit quicker
+        //Imgproc.bilateralFilter(imgGray, matFilter, 20, 100, 50); //works and decent speed
+        //Imgproc.bilateralFilter(imgGray, matFilter, 20, 50, 75); //works and decent speed
+        //Imgproc.bilateralFilter(imgGray, matFilter, 30, 50, 75); //works but a little slow
+        Imgproc.bilateralFilter(imgGray, matFilter, 20, 50, 75);
+
+        //Imgproc.bilateralFilter(imgGray, matFilter, 60, 100, 25); //works but slow
+        /*
+        doesn't work
+        Imgproc.bilateralFilter(imgGray, matFilter, 90, 154, 25);
+        Imgproc.bilateralFilter(imgGray, matFilter, 60, 154, 25);
+         */
 
         //System.out.println("MSPDEBUG : pre thresholding");
         //Imgproc.threshold(imgGray, matThresh,127,255,Imgproc.THRESH_BINARY);
         //Imgproc.threshold(imgGray, matThresh,154,255,Imgproc.THRESH_BINARY_INV);
+        //Imgproc.threshold(imgGray, matThresh,154,255,Imgproc.THRESH_TOZERO_INV);
+
+        //Imgproc.threshold(matFilter, matThresh,154,255,Imgproc.THRESH_TOZERO);
+        //Imgproc.threshold(matFilter, matThresh,127,255,Imgproc.THRESH_BINARY);
+
+        //Imgproc.threshold(imgGray, matThresh,127,255,Imgproc.THRESH_TOZERO);
+
+        //Imgproc.bilateralFilter(matThresh, matFilter, -1, 60, 60);
+
+        //Imgproc.morphologyEx(matThresh, matOpened, Imgproc.MORPH_DILATE, kernel);
+        //Imgproc.morphologyEx(matThresh, matOpened, Imgproc.MORPH_DILATE, kernel, new Point(-1,-1), 9);
+
+        //Imgproc.morphologyEx(matThresh, matClosed, Imgproc.MORPH_ERODE, kernel);
+
+
+        //Imgproc.morphologyEx(matThresh, matClosed, Imgproc.MORPH_ERODE, kernel, new Point(-1,-1), 9);
+        //Imgproc.morphologyEx(matClosed, matOpened, Imgproc.MORPH_DILATE, kernel, new Point(-1,-1), 9);
+
+        //Imgproc.morphologyEx(matThresh, matOpened, Imgproc.MORPH_DILATE, kernel, new Point(-1,-1), 9);
+        //Imgproc.morphologyEx(matOpened, matClosed, Imgproc.MORPH_ERODE, kernel, new Point(-1,-1), 9);
+
+        matOutput = matFilter;
 
         //Imgproc.adaptiveThreshold(imgGray, matThresh, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY,11,2);
         //Imgproc.adaptiveThreshold(imgGray, matThresh, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY,11,2);
@@ -229,13 +292,12 @@ public class CapturedPictureActivity extends AppCompatActivity {
         //Imgproc.morphologyEx(matThresh, matOpened, Imgproc.MORPH_OPEN, kernel);
         //Imgproc.morphologyEx(matThresh, matClosed, Imgproc.MORPH_CLOSE, kernel);
 
+        /*---------------------------*/
 
-
-        //Imgproc.blur(input, blur, new Size(7,7), new Point(2,2));
-        //Imgproc.blur(imgGray, matBlur, new Size(7,7)); //using default anchor of -1,-1 (kernel center)
         //Imgproc.HoughCircles(matBlur, matCircles, Imgproc.CV_HOUGH_GRADIENT, 2, 50, 100, 90, 0, 100);
 
-        Imgproc.HoughCircles(imgGray, matCircles, Imgproc.CV_HOUGH_GRADIENT, 2, 50, 100, 90, 1, 100);
+        Imgproc.HoughCircles(matOutput, matCircles, Imgproc.CV_HOUGH_GRADIENT, 2, 50, 100, 90, 1, 100);
+
         //Imgproc.HoughCircles(matThresh, matCircles, Imgproc.CV_HOUGH_GRADIENT, 2, 50, 100, 90, 0, 100);
 
         //Log.i(TAG, String.valueOf("size: " + circles.cols()) + ", " + String.valueOf(circles.rows()))
@@ -272,7 +334,7 @@ public class CapturedPictureActivity extends AppCompatActivity {
         circleCountOriginal = circleCount;
 
         Utils.matToBitmap(input, bmp32);
-        //Utils.matToBitmap(matClosed, bmp32);
+        //Utils.matToBitmap(matOutput, bmp32);
 
         return bmp32;
 
