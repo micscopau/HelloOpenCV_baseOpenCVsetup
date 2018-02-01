@@ -206,6 +206,7 @@ public class CapturedPictureActivity extends AppCompatActivity {
         Mat matThresh = new Mat();
         Mat matOpened = new Mat();
         Mat matClosed = new Mat();
+        Mat matGradient = new Mat();
         Mat matCanny = new Mat();
         Mat matOutput = new Mat();
 
@@ -235,17 +236,22 @@ public class CapturedPictureActivity extends AppCompatActivity {
         Imgproc.cvtColor(input, imgGray, Imgproc.COLOR_RGB2GRAY,0);
         Imgproc.bilateralFilter(imgGray, matFilter, 30, 90, 5);
         */
+        System.out.println("MSPDEBUG : pre gray");
 
         Imgproc.cvtColor(input, imgGray, Imgproc.COLOR_RGB2GRAY,0);
         //Imgproc.bilateralFilter(imgGray, matFilter, -1, 60, 60);
         //Imgproc.bilateralFilter(imgGray, matFilter, kernelLength, kernelLength*2, kernelLength/2);
+
+        System.out.println("MSPDEBUG : pre bilateral");
 
         //Imgproc.bilateralFilter(imgGray, matFilter, 60, 50, 25); //works but slowly
         //Imgproc.bilateralFilter(imgGray, matFilter, 40, 50, 25); //little bit quicker
         //Imgproc.bilateralFilter(imgGray, matFilter, 20, 100, 50); //works and decent speed
         //Imgproc.bilateralFilter(imgGray, matFilter, 20, 50, 75); //works and decent speed
         //Imgproc.bilateralFilter(imgGray, matFilter, 30, 50, 75); //works but a little slow
-        Imgproc.bilateralFilter(imgGray, matFilter, 20, 50, 75);
+        //Imgproc.bilateralFilter(imgGray, matFilter, 20, 50, 75);
+        //Imgproc.bilateralFilter(imgGray, matFilter, 30, 50, 60);
+        Imgproc.bilateralFilter(imgGray, matFilter, 30, 50, 75);
 
         //Imgproc.bilateralFilter(imgGray, matFilter, 60, 100, 25); //works but slow
         /*
@@ -254,12 +260,14 @@ public class CapturedPictureActivity extends AppCompatActivity {
         Imgproc.bilateralFilter(imgGray, matFilter, 60, 154, 25);
          */
 
-        //System.out.println("MSPDEBUG : pre thresholding");
-        //Imgproc.threshold(imgGray, matThresh,127,255,Imgproc.THRESH_BINARY);
+        System.out.println("MSPDEBUG : pre thresholding");
+        //Imgproc.threshold(matFilter, matThresh,135,255,Imgproc.THRESH_BINARY);
         //Imgproc.threshold(imgGray, matThresh,154,255,Imgproc.THRESH_BINARY_INV);
         //Imgproc.threshold(imgGray, matThresh,154,255,Imgproc.THRESH_TOZERO_INV);
 
-        //Imgproc.threshold(matFilter, matThresh,154,255,Imgproc.THRESH_TOZERO);
+        //Imgproc.threshold(matFilter, matThresh,127,255,Imgproc.THRESH_TOZERO); //Decent option
+        Imgproc.threshold(matFilter, matThresh,135,255,Imgproc.THRESH_TOZERO);
+        //Imgproc.threshold(matFilter, matThresh,135,255,Imgproc.THRESH_TOZERO);
         //Imgproc.threshold(matFilter, matThresh,127,255,Imgproc.THRESH_BINARY);
 
         //Imgproc.threshold(imgGray, matThresh,127,255,Imgproc.THRESH_TOZERO);
@@ -278,7 +286,7 @@ public class CapturedPictureActivity extends AppCompatActivity {
         //Imgproc.morphologyEx(matThresh, matOpened, Imgproc.MORPH_DILATE, kernel, new Point(-1,-1), 9);
         //Imgproc.morphologyEx(matOpened, matClosed, Imgproc.MORPH_ERODE, kernel, new Point(-1,-1), 9);
 
-        matOutput = matFilter;
+
 
         //Imgproc.adaptiveThreshold(imgGray, matThresh, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY,11,2);
         //Imgproc.adaptiveThreshold(imgGray, matThresh, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY,11,2);
@@ -292,11 +300,19 @@ public class CapturedPictureActivity extends AppCompatActivity {
         //Imgproc.morphologyEx(matThresh, matOpened, Imgproc.MORPH_OPEN, kernel);
         //Imgproc.morphologyEx(matThresh, matClosed, Imgproc.MORPH_CLOSE, kernel);
 
+        //Imgproc.morphologyEx(matOpened, matClosed, Imgproc.MORPH_CLOSE, kernel);
+        Imgproc.morphologyEx(matThresh, matGradient, Imgproc.MORPH_GRADIENT, kernel);
+
+        matOutput = matGradient;
+
         /*---------------------------*/
 
         //Imgproc.HoughCircles(matBlur, matCircles, Imgproc.CV_HOUGH_GRADIENT, 2, 50, 100, 90, 0, 100);
 
-        Imgproc.HoughCircles(matOutput, matCircles, Imgproc.CV_HOUGH_GRADIENT, 2, 50, 100, 90, 1, 100);
+        //Imgproc.HoughCircles(matOutput, matCircles, Imgproc.CV_HOUGH_GRADIENT, 2, 75, 100, 120, 25, 100);
+        //Imgproc.HoughCircles(matOutput, matCircles, Imgproc.CV_HOUGH_GRADIENT, 2, 75, 75, 120, 25, 100);
+        Imgproc.HoughCircles(matOutput, matCircles, Imgproc.CV_HOUGH_GRADIENT, 2, 50, 75, 85, 25, 100);
+
 
         //Imgproc.HoughCircles(matThresh, matCircles, Imgproc.CV_HOUGH_GRADIENT, 2, 50, 100, 90, 0, 100);
 
