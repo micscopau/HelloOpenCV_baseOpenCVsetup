@@ -6,6 +6,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.hardware.Camera;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.Message;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -52,6 +54,7 @@ public class CapturedPictureActivity extends AppCompatActivity {
     int ellipseCount = 0;
 
     private Bitmap circleBitmap;
+    private Boolean circleBitmapComplete = false;
     private Bitmap ellipseBitmap;
 
 
@@ -87,7 +90,14 @@ public class CapturedPictureActivity extends AppCompatActivity {
         }
     }
 
-
+    /*
+    private class imgProc implements Runnable{
+        @Override
+                public void run() {
+                circleBitmap = circleCounterHelper(bitmap);
+        }
+    }
+*/
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -95,6 +105,8 @@ public class CapturedPictureActivity extends AppCompatActivity {
 
         imageView = (ImageView) findViewById(R.id.captured_image);
         assert imageView != null;
+
+
 
         imgGray = new Mat();
 
@@ -128,17 +140,69 @@ public class CapturedPictureActivity extends AppCompatActivity {
 
             try {
                 Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
-                bitmap = RotateBitmap(bitmap, rotation);
+                final Bitmap rotatedBitmap  = RotateBitmap(bitmap, rotation);
 
-                circleBitmap = circleCounterHelper(bitmap);
+                //circleBitmap = circleCounterHelper(rotatedBitmap);
+
+                imageView.setImageBitmap(rotatedBitmap);
+
+                new Thread(new Runnable(){
+                    public void run() {
+                        circleBitmap = circleCounterHelper(rotatedBitmap);
+                        imageView.post(new Runnable() {
+                            public void run() {
+                                imageView.setImageBitmap(circleBitmap);
+                                updatePipCount();
+                            }
+                        });
+                    }
+                }).start();
+
+
+                /*
+                Handler handler = new Handler(){
+                    @Override public void handleMessage(Message msg){
+                        System.out.println("MSPDEBUG : Handler message : " + msg.toString());
+                    }
+                };
+
+                Runnable imgProc = new Runnable(){
+                    @Override
+                    public void run(){
+                        circleBitmap = circleCounterHelper(rotatedBitmap);
+
+                        handler.sendEmptyMessage();
+                    }
+                };
+
+                //imageView.setImageBitmap(rotatedBitmap);
+
+                System.out.println("MSPDEBUG: pre thread.start");
+
+                Thread imgProcThread = new Thread(imgProc);
+                imgProcThread.start();
+                //circleBitmap = circleCounterHelper(bitmap);
+
+                System.out.println("MSPDEBUG: post thread.start");
+
+
+                while(circleBitmapComplete == false){
+                    System.out.println("MSPDEBUG: image being processed");
+                    wait(1000);
+
+                }
+
+                imgProcThread.join();
+                System.out.println("MSPDEBUG: Processing completed");
+                */
 
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
 
-        imageView.setImageBitmap(circleBitmap);
-        updatePipCount();
+        //imageView.setImageBitmap(circleBitmap);
+        //updatePipCount();
 
     }
 
@@ -351,6 +415,8 @@ public class CapturedPictureActivity extends AppCompatActivity {
 
         Utils.matToBitmap(input, bmp32);
         //Utils.matToBitmap(matOutput, bmp32);
+
+        circleBitmapComplete = true;
 
         return bmp32;
 
